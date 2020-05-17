@@ -39,13 +39,19 @@ def callback():
 
     return 'OK'
 
-
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=event.message.text))
 
+@handler.add(MessageEvent, message=ImageMessage)
+def handle_image(event):
+    # LINEチャネルを通じてメッセージを返答
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text='画像です')
+    )
 
 if __name__ == "__main__":
     app.run()
