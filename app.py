@@ -9,7 +9,18 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage,
+    MessageEvent, TextMessage, TextSendMessage, mageMessage,
+)
+from io import BytesIO
+from azure.cognitiveservices.vision.face import FaceClient
+from msrest.authentication import CognitiveServicesCredentials
+
+YOUR_FACE_API_KEY = os.environ["YOUR_FACE_API_KEY"]
+YOUR_FACE_API_ENDPOINT = os.environ["YOUR_FACE_API_ENDPOINT"]
+
+face_client = FaceClient(
+    YOUR_FACE_API_ENDPOINT,
+    CognitiveServicesCredentials(YOUR_FACE_API_KEY)
 )
 
 app = Flask(__name__)
@@ -47,10 +58,35 @@ def handle_message(event):
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
+		try:
+				# ----- A -----
+        # メッセージIDを受け取る
+        message_id = event.message.id
+        # メッセージIDに含まれるmessage_contentを抽出する
+        message_content = line_bot_api.get_message_content(message_id)
+        # contentの画像データをバイナリデータとして扱えるようにする
+        image = BytesIO(message_content.content)
+
+				# ----- B -----
+        # Detect from streamで顔検出
+        detected_faces = face_client.face.detect_with_stream(image)
+        print(detected_faces)
+        # 検出結果に応じて処理を分ける
+        if detected_faces != []:
+            # 検出された顔の最初のIDを取得
+            text = detected_faces[0].face_id
+        else:
+            # 検出されない場合のメッセージ
+            text = "no faces detected"
+    except:
+        # エラー時のメッセージ
+        text = "error"
+
+		# ----- C -----
     # LINEチャネルを通じてメッセージを返答
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text='画像です')
+        TextSendMessage(text=text)
     )
 
 if __name__ == "__main__":
